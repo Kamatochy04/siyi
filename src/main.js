@@ -1,12 +1,15 @@
 import './style.css'
 import AOS from 'aos'
 import 'aos/dist/aos.css'
+import { formConfig } from './config.js'
 
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
 const staggerSections = document.querySelectorAll('.js-stagger-section')
 staggerSections.forEach((section) => {
-  const nodes = section.querySelectorAll('h1, h2, h3, p, article, li, .interactive-btn, .video-card, .video-nav')
+  const nodes = section.querySelectorAll(
+    'h1, h2, h3, p, article, li, blockquote, .interactive-btn, .video-card, .video-nav, .text-review-card, .master-card',
+  )
   nodes.forEach((node, index) => {
     if (!node.dataset.aos) node.dataset.aos = 'fade-up'
     node.dataset.aosDelay = String(index * 80)
@@ -91,6 +94,105 @@ if (videoSlider) {
     window.addEventListener('resize', () => setPosition(false))
     setPosition(false)
   }
+}
+
+document.body.addEventListener('click', (e) => {
+  const stub = e.target.closest?.('[data-instagram-stub]')
+  if (stub) e.preventDefault()
+})
+
+const accessKeyInput = document.querySelector('#register-form input[name="access_key"]')
+if (accessKeyInput && formConfig.web3formsAccessKey) {
+  accessKeyInput.value = formConfig.web3formsAccessKey
+}
+
+const registerForm = document.getElementById('register-form')
+const regStatus = document.getElementById('reg-status')
+const regSubmit = document.getElementById('reg-submit')
+
+function setFieldInvalid(input, invalid, messageId, message) {
+  input.setAttribute('aria-invalid', invalid ? 'true' : 'false')
+  if (messageId) {
+    let hint = document.getElementById(messageId)
+    if (!hint && message) {
+      hint = document.createElement('p')
+      hint.id = messageId
+      hint.className = 'mt-1 text-sm text-red-400'
+      input.parentElement?.appendChild(hint)
+    }
+    if (hint) hint.textContent = invalid ? message : ''
+  }
+  input.classList.toggle('border-red-500', invalid)
+  input.classList.toggle('focus:border-red-500', invalid)
+}
+
+if (registerForm && regStatus) {
+  registerForm.addEventListener('submit', async (e) => {
+    e.preventDefault()
+    regStatus.textContent = ''
+
+    const name = registerForm.querySelector('#reg-name')
+    const phone = registerForm.querySelector('#reg-phone')
+    const email = registerForm.querySelector('#reg-email')
+    const message = registerForm.querySelector('#reg-message')
+
+    let ok = true
+    if (name && !name.value.trim()) {
+      setFieldInvalid(name, true, 'reg-name-hint', 'Укажите имя')
+      ok = false
+    } else if (name) setFieldInvalid(name, false, 'reg-name-hint', '')
+
+    if (phone && !phone.value.trim()) {
+      setFieldInvalid(phone, true, 'reg-phone-hint', 'Укажите телефон')
+      ok = false
+    } else if (phone) setFieldInvalid(phone, false, 'reg-phone-hint', '')
+
+    if (email && email.value.trim()) {
+      const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+      if (!re.test(email.value.trim())) {
+        setFieldInvalid(email, true, 'reg-email-hint', 'Проверьте формат email')
+        ok = false
+      } else setFieldInvalid(email, false, 'reg-email-hint', '')
+    } else if (email) setFieldInvalid(email, false, 'reg-email-hint', '')
+
+    if (!ok) return
+
+    const payload = {
+      access_key: formConfig.web3formsAccessKey || accessKeyInput?.value || '',
+      subject: 'Новая заявка SIYAI.FEST',
+      name: name?.value.trim() || '',
+      phone: phone?.value.trim() || '',
+      email: email?.value.trim() || '',
+      message: message?.value.trim() || '',
+    }
+
+    if (!payload.access_key) {
+      regStatus.textContent =
+        'Не задан ключ Web3Forms: добавьте VITE_WEB3FORMS_ACCESS_KEY в файл .env и перезапустите сборку.'
+      return
+    }
+
+    if (regSubmit) regSubmit.disabled = true
+    try {
+      const res = await fetch('https://api.web3forms.com/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (data.success) {
+        const stub = formConfig.instagramAfterFormStubUrl || '#'
+        regStatus.innerHTML = `Спасибо, мы свяжемся с вами. Далее - переход в Instagram: <a href="${stub}" class="text-[#c9a96e] underline underline-offset-4" data-instagram-stub>@siai.fest</a> (ссылка-заглушка).`
+        registerForm.reset()
+      } else {
+        regStatus.textContent = data.message || 'Не удалось отправить. Попробуйте позже.'
+      }
+    } catch {
+      regStatus.textContent = 'Ошибка сети. Попробуйте позже.'
+    } finally {
+      if (regSubmit) regSubmit.disabled = false
+    }
+  })
 }
 
 const interactiveCards = document.querySelectorAll('.interactive-card, .benefits-grid article')

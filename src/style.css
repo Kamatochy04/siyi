@@ -289,6 +289,7 @@
   .video-card {
     flex: 0 0 calc((100% - 1.5rem) / 3);
   }
+
 }
 
 @keyframes stars-twinkle {
@@ -373,7 +374,15 @@
   }
 
   /* Мобильная версия: у всех карточек внутренний отступ примерно в 2 раза меньше */
-  .interactive-card {
+  .interactive-card:not(.master-card) {
+    padding: 0.875rem !important;
+  }
+
+  .master-card.interactive-card {
+    padding: 0 !important;
+  }
+
+  .master-card .master-card__body {
     padding: 0.875rem !important;
   }
 

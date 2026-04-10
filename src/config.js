@@ -20,4 +20,9 @@ export const formConfig = {
   webhookUrl: env.VITE_WEBHOOK_URL || '',
   /** Номер в международном формате без +, например 79991234567 */
   whatsappPhone: env.VITE_WHATSAPP_PHONE || '',
+  /**
+   * Заглушка для шага «далее в Instagram» после заявки.
+   * Когда будет готова реальная ссылка - подставьте URL (или оставьте #).
+   */
+  instagramAfterFormStubUrl: env.VITE_INSTAGRAM_AFTER_STUB_URL || '#',
 }
