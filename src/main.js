@@ -59,6 +59,24 @@ if (videoSlider) {
       setPosition(true)
     }
 
+    const AUTO_SLIDE_MS = 6000
+    let autoSlideTimer = null
+    const stopAutoSlide = () => {
+      if (autoSlideTimer !== null) {
+        clearInterval(autoSlideTimer)
+        autoSlideTimer = null
+      }
+    }
+    const startAutoSlide = () => {
+      stopAutoSlide()
+      if (reducedMotion || slides.length <= 1) return
+      autoSlideTimer = window.setInterval(() => go(1), AUTO_SLIDE_MS)
+    }
+    const restartAutoSlide = () => {
+      stopAutoSlide()
+      startAutoSlide()
+    }
+
     track.addEventListener('transitionend', () => {
       const originalCount = slides.length - 6
       if (index >= originalCount + 3) {
@@ -71,8 +89,14 @@ if (videoSlider) {
       isAnimating = false
     })
 
-    prevBtn.addEventListener('click', () => go(-1))
-    nextBtn.addEventListener('click', () => go(1))
+    prevBtn.addEventListener('click', () => {
+      restartAutoSlide()
+      go(-1)
+    })
+    nextBtn.addEventListener('click', () => {
+      restartAutoSlide()
+      go(1)
+    })
     let touchStartX = 0
     viewport.addEventListener(
       'touchstart',
@@ -86,6 +110,7 @@ if (videoSlider) {
       (e) => {
         const dx = e.changedTouches[0].clientX - touchStartX
         if (Math.abs(dx) > 40) {
+          restartAutoSlide()
           go(dx > 0 ? -1 : 1)
         }
       },
@@ -93,6 +118,11 @@ if (videoSlider) {
     )
     window.addEventListener('resize', () => setPosition(false))
     setPosition(false)
+    startAutoSlide()
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) stopAutoSlide()
+      else startAutoSlide()
+    })
   }
 }
 
@@ -235,6 +265,14 @@ if (archiveLightbox) {
 }
 window.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') closeArchiveLightbox()
+})
+
+document.querySelectorAll('video').forEach((video) => {
+  video.addEventListener('play', () => {
+    document.querySelectorAll('video').forEach((v) => {
+      if (v !== video) v.pause()
+    })
+  })
 })
 
 document.body.addEventListener('click', (e) => {
