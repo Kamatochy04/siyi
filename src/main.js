@@ -8,7 +8,7 @@ const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matc
 const staggerSections = document.querySelectorAll('.js-stagger-section')
 staggerSections.forEach((section) => {
   const nodes = section.querySelectorAll(
-    'h1, h2, h3, p, article, li, blockquote, .interactive-btn, .video-card, .video-nav, .text-review-card, .master-card',
+    'h1, h2, h3, p, article, li, blockquote, .interactive-btn, .video-card, .video-nav, .text-review-card, .master-card, .archive-video-card, .archive-nav',
   )
   nodes.forEach((node, index) => {
     if (!node.dataset.aos) node.dataset.aos = 'fade-up'
@@ -95,6 +95,147 @@ if (videoSlider) {
     setPosition(false)
   }
 }
+
+const archiveLightbox = document.getElementById('archive-video-lightbox')
+const archivePlayer = document.getElementById('archive-lightbox-player')
+const archiveCloseBtn = document.querySelector('[data-archive-lightbox-close]')
+
+function closeArchiveLightbox() {
+  if (!archiveLightbox || !archivePlayer) return
+  archivePlayer.pause()
+  archivePlayer.removeAttribute('src')
+  archivePlayer.load()
+  archiveLightbox.classList.add('hidden')
+  archiveLightbox.classList.remove('flex')
+  document.body.style.overflow = ''
+}
+
+function openArchiveLightbox(src) {
+  if (!archiveLightbox || !archivePlayer || !src) return
+  archivePlayer.src = src
+  archiveLightbox.classList.remove('hidden')
+  archiveLightbox.classList.add('flex')
+  document.body.style.overflow = 'hidden'
+  archivePlayer.play().catch(() => {})
+}
+
+const archiveVideos = document.querySelector('[data-archive-videos]')
+if (archiveVideos) {
+  const viewport = archiveVideos.querySelector('#archive-viewport')
+  const track = archiveVideos.querySelector('#archive-track')
+  const prevBtn = archiveVideos.querySelector('.archive-nav--prev')
+  const nextBtn = archiveVideos.querySelector('.archive-nav--next')
+  if (viewport && track && prevBtn && nextBtn) {
+    let slides = Array.from(track.children)
+    const originalCount = slides.length
+    const visible = 5
+    if (originalCount > 1) {
+      const firstClones = slides.slice(0, visible).map((el) => el.cloneNode(true))
+      const lastClones = slides.slice(-visible).map((el) => el.cloneNode(true))
+      lastClones.forEach((c) => track.insertBefore(c, track.firstChild))
+      firstClones.forEach((c) => track.appendChild(c))
+      slides = Array.from(track.children)
+    }
+
+    const syncArchiveSlideWidths = () => {
+      slides = Array.from(track.children)
+      const vw = viewport.getBoundingClientRect().width
+      const isLg = window.matchMedia('(min-width: 1024px)').matches
+      const isMd = window.matchMedia('(min-width: 768px)').matches
+      const count = isLg ? 5 : isMd ? 3 : 2
+      const gap = isMd ? 16 : 12
+      const w = Math.max(112, (vw - (count - 1) * gap) / count)
+      slides.forEach((el) => {
+        el.style.flex = `0 0 ${w}px`
+      })
+    }
+
+    let index = visible
+    let isAnimating = false
+
+    const slideWidth = () => {
+      const el = slides[0]
+      if (!el) return 0
+      const g = window.getComputedStyle(track).gap
+      const gap = parseFloat(g) || 16
+      return el.getBoundingClientRect().width + gap
+    }
+
+    const setPosition = (animate = true) => {
+      const w = slideWidth()
+      const x = -index * w
+      track.style.transition = animate ? 'transform 0.45s ease' : 'none'
+      track.style.transform = `translate3d(${x}px,0,0)`
+    }
+
+    const go = (dir) => {
+      if (isAnimating) return
+      isAnimating = true
+      index += dir
+      setPosition(true)
+    }
+
+    track.addEventListener('transitionend', (e) => {
+      if (e.target !== track || e.propertyName !== 'transform') return
+      if (index >= originalCount + visible) {
+        index = visible
+        setPosition(false)
+      } else if (index <= visible - 1) {
+        index = originalCount + visible - 1
+        setPosition(false)
+      }
+      isAnimating = false
+    })
+
+    prevBtn.addEventListener('click', () => go(-1))
+    nextBtn.addEventListener('click', () => go(1))
+
+    let touchStartX = 0
+    viewport.addEventListener(
+      'touchstart',
+      (e) => {
+        touchStartX = e.changedTouches[0].clientX
+      },
+      { passive: true },
+    )
+    viewport.addEventListener(
+      'touchend',
+      (e) => {
+        const dx = e.changedTouches[0].clientX - touchStartX
+        if (Math.abs(dx) > 40) {
+          go(dx > 0 ? -1 : 1)
+        }
+      },
+      { passive: true },
+    )
+
+    const onResizeArchive = () => {
+      syncArchiveSlideWidths()
+      setPosition(false)
+    }
+    window.addEventListener('resize', onResizeArchive)
+    syncArchiveSlideWidths()
+    setPosition(false)
+
+    viewport.addEventListener('click', (e) => {
+      const btn = e.target.closest('.archive-video-card[data-archive-src]')
+      if (btn) {
+        const src = btn.getAttribute('data-archive-src')
+        if (src) openArchiveLightbox(src)
+      }
+    })
+  }
+}
+
+if (archiveCloseBtn) archiveCloseBtn.addEventListener('click', closeArchiveLightbox)
+if (archiveLightbox) {
+  archiveLightbox.addEventListener('click', (e) => {
+    if (e.target === archiveLightbox) closeArchiveLightbox()
+  })
+}
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeArchiveLightbox()
+})
 
 document.body.addEventListener('click', (e) => {
   const stub = e.target.closest?.('[data-instagram-stub]')

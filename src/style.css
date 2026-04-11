@@ -286,11 +286,21 @@
     will-change: transform;
   }
 
+  .archive-track {
+    display: flex;
+    transition: transform 0.45s ease;
+    will-change: transform;
+  }
+
   .video-card {
     flex: 0 0 calc((100% - 1.5rem) / 3);
   }
 
+  .archive-lightbox-video {
+    background: #000;
+  }
 }
+
 
 @keyframes stars-twinkle {
   from {
