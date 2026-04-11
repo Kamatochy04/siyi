@@ -288,7 +288,7 @@
 
   .archive-track {
     display: flex;
-    transition: transform 0.45s ease;
+    transition: transform 0.65s cubic-bezier(0.33, 1, 0.32, 1);
     will-change: transform;
   }
 

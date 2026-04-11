@@ -130,6 +130,9 @@ const archiveLightbox = document.getElementById('archive-video-lightbox')
 const archivePlayer = document.getElementById('archive-lightbox-player')
 const archiveCloseBtn = document.querySelector('[data-archive-lightbox-close]')
 
+let archiveAutoplayStop = () => {}
+let archiveAutoplayStart = () => {}
+
 function closeArchiveLightbox() {
   if (!archiveLightbox || !archivePlayer) return
   archivePlayer.pause()
@@ -138,10 +141,12 @@ function closeArchiveLightbox() {
   archiveLightbox.classList.add('hidden')
   archiveLightbox.classList.remove('flex')
   document.body.style.overflow = ''
+  archiveAutoplayStart()
 }
 
 function openArchiveLightbox(src) {
   if (!archiveLightbox || !archivePlayer || !src) return
+  archiveAutoplayStop()
   archivePlayer.src = src
   archiveLightbox.classList.remove('hidden')
   archiveLightbox.classList.add('flex')
@@ -191,10 +196,12 @@ if (archiveVideos) {
       return el.getBoundingClientRect().width + gap
     }
 
+    const archiveSlideTransition = 'transform 0.65s cubic-bezier(0.33, 1, 0.32, 1)'
+
     const setPosition = (animate = true) => {
       const w = slideWidth()
       const x = -index * w
-      track.style.transition = animate ? 'transform 0.45s ease' : 'none'
+      track.style.transition = animate ? archiveSlideTransition : 'none'
       track.style.transform = `translate3d(${x}px,0,0)`
     }
 
@@ -204,6 +211,28 @@ if (archiveVideos) {
       index += dir
       setPosition(true)
     }
+
+    const AUTO_ARCHIVE_MS = 6000
+    let archiveAutoTimer = null
+    const stopArchiveAutoSlide = () => {
+      if (archiveAutoTimer !== null) {
+        clearInterval(archiveAutoTimer)
+        archiveAutoTimer = null
+      }
+    }
+    const startArchiveAutoSlide = () => {
+      stopArchiveAutoSlide()
+      if (reducedMotion || slides.length <= 1) return
+      if (archiveLightbox && !archiveLightbox.classList.contains('hidden')) return
+      archiveAutoTimer = window.setInterval(() => go(1), AUTO_ARCHIVE_MS)
+    }
+    const restartArchiveAutoSlide = () => {
+      stopArchiveAutoSlide()
+      startArchiveAutoSlide()
+    }
+
+    archiveAutoplayStop = stopArchiveAutoSlide
+    archiveAutoplayStart = startArchiveAutoSlide
 
     track.addEventListener('transitionend', (e) => {
       if (e.target !== track || e.propertyName !== 'transform') return
@@ -217,8 +246,14 @@ if (archiveVideos) {
       isAnimating = false
     })
 
-    prevBtn.addEventListener('click', () => go(-1))
-    nextBtn.addEventListener('click', () => go(1))
+    prevBtn.addEventListener('click', () => {
+      restartArchiveAutoSlide()
+      go(-1)
+    })
+    nextBtn.addEventListener('click', () => {
+      restartArchiveAutoSlide()
+      go(1)
+    })
 
     let touchStartX = 0
     viewport.addEventListener(
@@ -233,6 +268,7 @@ if (archiveVideos) {
       (e) => {
         const dx = e.changedTouches[0].clientX - touchStartX
         if (Math.abs(dx) > 40) {
+          restartArchiveAutoSlide()
           go(dx > 0 ? -1 : 1)
         }
       },
@@ -246,6 +282,11 @@ if (archiveVideos) {
     window.addEventListener('resize', onResizeArchive)
     syncArchiveSlideWidths()
     setPosition(false)
+    startArchiveAutoSlide()
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) stopArchiveAutoSlide()
+      else startArchiveAutoSlide()
+    })
 
     viewport.addEventListener('click', (e) => {
       const btn = e.target.closest('.archive-video-card[data-archive-src]')
