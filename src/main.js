@@ -2,13 +2,14 @@ import './style.css'
 import AOS from 'aos'
 import 'aos/dist/aos.css'
 import { formConfig } from './config.js'
+import { mockContent } from './mockContent.js'
 
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
 const staggerSections = document.querySelectorAll('.js-stagger-section')
 staggerSections.forEach((section) => {
   const nodes = section.querySelectorAll(
-    'h1, h2, h3, p, article, li, blockquote, .interactive-btn, .video-card, .video-nav, .text-review-card, .master-card, .archive-video-card, .archive-nav',
+    'h1, h2, h3, p, article, li, blockquote, .interactive-btn, .video-card, .video-nav, .text-review-card, .review-carousel-card, .review-nav, .festival-gallery__item, .master-card, .team-carousel-nav',
   )
   nodes.forEach((node, index) => {
     if (!node.dataset.aos) node.dataset.aos = 'fade-up'
@@ -24,6 +25,42 @@ AOS.init({
   duration: 650,
   disable: reducedMotion,
 })
+
+const teamIntroEl = document.getElementById('mock-team-intro')
+if (teamIntroEl) teamIntroEl.textContent = mockContent.teamIntro
+
+const registerLeadEl = document.getElementById('mock-register-lead')
+if (registerLeadEl) registerLeadEl.textContent = mockContent.registerLead
+
+const nameInput = document.getElementById('reg-name')
+const phoneInput = document.getElementById('reg-phone')
+const emailInput = document.getElementById('reg-email')
+const messageInput = document.getElementById('reg-message')
+if (nameInput) nameInput.placeholder = mockContent.form.namePlaceholder
+if (phoneInput) phoneInput.placeholder = mockContent.form.phonePlaceholder
+if (emailInput) emailInput.placeholder = mockContent.form.emailPlaceholder
+if (messageInput) messageInput.placeholder = mockContent.form.messagePlaceholder
+
+const textReviewsGrid = document.getElementById('text-reviews-grid')
+if (textReviewsGrid && mockContent.extraTextReviews.length) {
+  for (const { quote, footnote } of mockContent.extraTextReviews) {
+    const bq = document.createElement('blockquote')
+    bq.className =
+      'text-review-card interactive-card rounded-2xl border border-[#162040] bg-[#0f1628] p-7'
+    bq.dataset.aos = 'fade-up'
+    bq.dataset.aosDuration = '650'
+    const p = document.createElement('p')
+    p.className = 'text-lg italic leading-relaxed text-[#e8d5b0]'
+    p.textContent = quote
+    const footer = document.createElement('footer')
+    footer.className = 'mt-4 font-sans text-xs uppercase tracking-[0.18em] text-[#4e6080]'
+    footer.textContent = footnote
+    bq.appendChild(p)
+    bq.appendChild(footer)
+    textReviewsGrid.appendChild(bq)
+  }
+      AOS.refresh()
+}
 
 const videoSlider = document.querySelector('[data-video-slider]')
 if (videoSlider) {
@@ -126,66 +163,25 @@ if (videoSlider) {
   }
 }
 
-const archiveLightbox = document.getElementById('archive-video-lightbox')
-const archivePlayer = document.getElementById('archive-lightbox-player')
-const archiveCloseBtn = document.querySelector('[data-archive-lightbox-close]')
-
-let archiveAutoplayStop = () => {}
-let archiveAutoplayStart = () => {}
-
-function closeArchiveLightbox() {
-  if (!archiveLightbox || !archivePlayer) return
-  archivePlayer.pause()
-  archivePlayer.removeAttribute('src')
-  archivePlayer.load()
-  archiveLightbox.classList.add('hidden')
-  archiveLightbox.classList.remove('flex')
-  document.body.style.overflow = ''
-  archiveAutoplayStart()
-}
-
-function openArchiveLightbox(src) {
-  if (!archiveLightbox || !archivePlayer || !src) return
-  archiveAutoplayStop()
-  archivePlayer.src = src
-  archiveLightbox.classList.remove('hidden')
-  archiveLightbox.classList.add('flex')
-  document.body.style.overflow = 'hidden'
-  archivePlayer.play().catch(() => {})
-}
-
-const archiveVideos = document.querySelector('[data-archive-videos]')
-if (archiveVideos) {
-  const viewport = archiveVideos.querySelector('#archive-viewport')
-  const track = archiveVideos.querySelector('#archive-track')
-  const prevBtn = archiveVideos.querySelector('.archive-nav--prev')
-  const nextBtn = archiveVideos.querySelector('.archive-nav--next')
+const reviewCarousel = document.querySelector('[data-review-carousel]')
+if (reviewCarousel) {
+  const viewport = reviewCarousel.querySelector('#review-carousel-viewport')
+  const track = reviewCarousel.querySelector('#review-carousel-track')
+  const prevBtn = reviewCarousel.querySelector('.review-nav--prev')
+  const nextBtn = reviewCarousel.querySelector('.review-nav--next')
   if (viewport && track && prevBtn && nextBtn) {
     let slides = Array.from(track.children)
     const originalCount = slides.length
-    const visible = 5
+    const maxVisible = 3
     if (originalCount > 1) {
-      const firstClones = slides.slice(0, visible).map((el) => el.cloneNode(true))
-      const lastClones = slides.slice(-visible).map((el) => el.cloneNode(true))
+      const firstClones = slides.slice(0, maxVisible).map((el) => el.cloneNode(true))
+      const lastClones = slides.slice(-maxVisible).map((el) => el.cloneNode(true))
       lastClones.forEach((c) => track.insertBefore(c, track.firstChild))
       firstClones.forEach((c) => track.appendChild(c))
       slides = Array.from(track.children)
     }
 
-    const syncArchiveSlideWidths = () => {
-      slides = Array.from(track.children)
-      const vw = viewport.getBoundingClientRect().width
-      const isLg = window.matchMedia('(min-width: 1024px)').matches
-      const isMd = window.matchMedia('(min-width: 768px)').matches
-      const count = isLg ? 5 : isMd ? 3 : 2
-      const gap = isMd ? 16 : 12
-      const w = Math.max(112, (vw - (count - 1) * gap) / count)
-      slides.forEach((el) => {
-        el.style.flex = `0 0 ${w}px`
-      })
-    }
-
-    let index = visible
+    let index = originalCount > 1 ? maxVisible : 0
     let isAnimating = false
 
     const slideWidth = () => {
@@ -196,12 +192,193 @@ if (archiveVideos) {
       return el.getBoundingClientRect().width + gap
     }
 
-    const archiveSlideTransition = 'transform 0.65s cubic-bezier(0.33, 1, 0.32, 1)'
+    const setPosition = (animate = true) => {
+      const w = slideWidth()
+      const x = -index * w
+      track.style.transition = animate ? 'transform 0.55s cubic-bezier(0.33, 1, 0.32, 1)' : 'none'
+      track.style.transform = `translate3d(${x}px,0,0)`
+    }
+
+    const go = (dir) => {
+      if (isAnimating) return
+      track.querySelectorAll('video').forEach((v) => v.pause())
+      isAnimating = true
+      index += dir
+      setPosition(true)
+    }
+
+    const getVisibleCount = () => {
+      if (window.matchMedia('(min-width: 1024px)').matches) return 3
+      if (window.matchMedia('(min-width: 640px)').matches) return 2
+      return 1
+    }
+
+    const syncReviewSlideWidths = () => {
+      slides = Array.from(track.children)
+      const vw = viewport.getBoundingClientRect().width
+      const count = getVisibleCount()
+      const g = window.getComputedStyle(track).gap
+      const gap = parseFloat(g) || 16
+      const w = Math.max(220, (vw - (count - 1) * gap) / count)
+      slides.forEach((el) => {
+        el.style.flex = `0 0 ${w}px`
+      })
+    }
+
+    const AUTO_REVIEW_MS = 8000
+    let reviewAutoTimer = null
+    const stopReviewAuto = () => {
+      if (reviewAutoTimer !== null) {
+        clearInterval(reviewAutoTimer)
+        reviewAutoTimer = null
+      }
+    }
+    const startReviewAuto = () => {
+      stopReviewAuto()
+      if (reducedMotion || originalCount <= 1) return
+      reviewAutoTimer = window.setInterval(() => go(1), AUTO_REVIEW_MS)
+    }
+    const restartReviewAuto = () => {
+      stopReviewAuto()
+      startReviewAuto()
+    }
+
+    track.addEventListener('transitionend', (e) => {
+      if (e.target !== track || e.propertyName !== 'transform') return
+      if (originalCount > 1) {
+        if (index >= originalCount + maxVisible) {
+          index = maxVisible
+          setPosition(false)
+        } else if (index <= maxVisible - 1) {
+          index = originalCount + maxVisible - 1
+          setPosition(false)
+        }
+      }
+      isAnimating = false
+    })
+
+    prevBtn.addEventListener('click', () => {
+      restartReviewAuto()
+      go(-1)
+    })
+    nextBtn.addEventListener('click', () => {
+      restartReviewAuto()
+      go(1)
+    })
+
+    let reviewTouchStartX = 0
+    viewport.addEventListener(
+      'touchstart',
+      (e) => {
+        reviewTouchStartX = e.changedTouches[0].clientX
+      },
+      { passive: true },
+    )
+    viewport.addEventListener(
+      'touchend',
+      (e) => {
+        const dx = e.changedTouches[0].clientX - reviewTouchStartX
+        if (Math.abs(dx) > 40) {
+          restartReviewAuto()
+          go(dx > 0 ? -1 : 1)
+        }
+      },
+      { passive: true },
+    )
+
+    const onResizeReview = () => {
+      syncReviewSlideWidths()
+      setPosition(false)
+    }
+    window.addEventListener('resize', onResizeReview)
+    syncReviewSlideWidths()
+    setPosition(false)
+    startReviewAuto()
+    track.querySelectorAll('video').forEach((v) => {
+      v.addEventListener('play', () => stopReviewAuto())
+      v.addEventListener('pause', () => startReviewAuto())
+      v.addEventListener('ended', () => startReviewAuto())
+    })
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) stopReviewAuto()
+      else startReviewAuto()
+    })
+  }
+}
+
+const festivalPhotoLightbox = document.getElementById('festival-photo-lightbox')
+const festivalLightboxImg = document.getElementById('festival-lightbox-img')
+const festivalLightboxCloseBtn = document.querySelector('[data-festival-lightbox-close]')
+
+function closeFestivalPhotoLightbox() {
+  if (!festivalPhotoLightbox || !festivalLightboxImg) return
+  festivalLightboxImg.removeAttribute('src')
+  festivalLightboxImg.alt = ''
+  festivalPhotoLightbox.classList.add('hidden')
+  festivalPhotoLightbox.classList.remove('flex')
+  document.body.style.overflow = ''
+}
+
+function openFestivalPhotoLightbox(src, alt = '') {
+  if (!festivalPhotoLightbox || !festivalLightboxImg || !src) return
+  festivalLightboxImg.src = src
+  festivalLightboxImg.alt = alt || 'Фото с фестиваля Siai.fest'
+  festivalPhotoLightbox.classList.remove('hidden')
+  festivalPhotoLightbox.classList.add('flex')
+  document.body.style.overflow = 'hidden'
+}
+
+const festivalGallery = document.querySelector('[data-festival-gallery]')
+if (festivalGallery) {
+  const viewport = festivalGallery.querySelector('#festival-gallery-viewport')
+  const track = festivalGallery.querySelector('#festival-gallery-track')
+  const prevBtn = festivalGallery.querySelector('.festival-gallery-nav--prev')
+  const nextBtn = festivalGallery.querySelector('.festival-gallery-nav--next')
+  if (viewport && track && prevBtn && nextBtn) {
+    let slides = Array.from(track.children)
+    const originalCount = slides.length
+    const maxVisible = 3
+    if (originalCount > 1) {
+      const firstClones = slides.slice(0, maxVisible).map((el) => el.cloneNode(true))
+      const lastClones = slides.slice(-maxVisible).map((el) => el.cloneNode(true))
+      lastClones.forEach((c) => track.insertBefore(c, track.firstChild))
+      firstClones.forEach((c) => track.appendChild(c))
+      slides = Array.from(track.children)
+    }
+
+    const getVisibleCount = () => {
+      if (window.matchMedia('(min-width: 768px)').matches) return 3
+      if (window.matchMedia('(min-width: 480px)').matches) return 2
+      return 1
+    }
+
+    const syncGallerySlideWidths = () => {
+      slides = Array.from(track.children)
+      const vw = viewport.getBoundingClientRect().width
+      const count = getVisibleCount()
+      const g = window.getComputedStyle(track).gap
+      const gap = parseFloat(g) || 12
+      const w = Math.max(120, (vw - (count - 1) * gap) / count)
+      slides.forEach((el) => {
+        el.style.flex = `0 0 ${w}px`
+      })
+    }
+
+    let index = maxVisible
+    let isAnimating = false
+
+    const slideWidth = () => {
+      const el = slides[0]
+      if (!el) return 0
+      const g = window.getComputedStyle(track).gap
+      const gap = parseFloat(g) || 12
+      return el.getBoundingClientRect().width + gap
+    }
 
     const setPosition = (animate = true) => {
       const w = slideWidth()
       const x = -index * w
-      track.style.transition = animate ? archiveSlideTransition : 'none'
+      track.style.transition = animate ? 'transform 0.55s cubic-bezier(0.33, 1, 0.32, 1)' : 'none'
       track.style.transform = `translate3d(${x}px,0,0)`
     }
 
@@ -212,46 +389,42 @@ if (archiveVideos) {
       setPosition(true)
     }
 
-    const AUTO_ARCHIVE_MS = 6000
-    let archiveAutoTimer = null
-    const stopArchiveAutoSlide = () => {
-      if (archiveAutoTimer !== null) {
-        clearInterval(archiveAutoTimer)
-        archiveAutoTimer = null
+    const AUTO_FESTIVAL_GALLERY_MS = 2600
+    let galleryAutoTimer = null
+    const stopGalleryAuto = () => {
+      if (galleryAutoTimer !== null) {
+        clearInterval(galleryAutoTimer)
+        galleryAutoTimer = null
       }
     }
-    const startArchiveAutoSlide = () => {
-      stopArchiveAutoSlide()
-      if (reducedMotion || slides.length <= 1) return
-      if (archiveLightbox && !archiveLightbox.classList.contains('hidden')) return
-      archiveAutoTimer = window.setInterval(() => go(1), AUTO_ARCHIVE_MS)
+    const startGalleryAuto = () => {
+      stopGalleryAuto()
+      if (reducedMotion || originalCount <= 1) return
+      galleryAutoTimer = window.setInterval(() => go(1), AUTO_FESTIVAL_GALLERY_MS)
     }
-    const restartArchiveAutoSlide = () => {
-      stopArchiveAutoSlide()
-      startArchiveAutoSlide()
+    const restartGalleryAuto = () => {
+      stopGalleryAuto()
+      startGalleryAuto()
     }
-
-    archiveAutoplayStop = stopArchiveAutoSlide
-    archiveAutoplayStart = startArchiveAutoSlide
 
     track.addEventListener('transitionend', (e) => {
       if (e.target !== track || e.propertyName !== 'transform') return
-      if (index >= originalCount + visible) {
-        index = visible
+      if (index >= originalCount + maxVisible) {
+        index = maxVisible
         setPosition(false)
-      } else if (index <= visible - 1) {
-        index = originalCount + visible - 1
+      } else if (index <= maxVisible - 1) {
+        index = originalCount + maxVisible - 1
         setPosition(false)
       }
       isAnimating = false
     })
 
     prevBtn.addEventListener('click', () => {
-      restartArchiveAutoSlide()
+      restartGalleryAuto()
       go(-1)
     })
     nextBtn.addEventListener('click', () => {
-      restartArchiveAutoSlide()
+      restartGalleryAuto()
       go(1)
     })
 
@@ -267,45 +440,196 @@ if (archiveVideos) {
       'touchend',
       (e) => {
         const dx = e.changedTouches[0].clientX - touchStartX
-        if (Math.abs(dx) > 40) {
-          restartArchiveAutoSlide()
+        if (Math.abs(dx) > 30) {
+          restartGalleryAuto()
           go(dx > 0 ? -1 : 1)
         }
       },
       { passive: true },
     )
 
-    const onResizeArchive = () => {
-      syncArchiveSlideWidths()
+    const onResizeGallery = () => {
+      syncGallerySlideWidths()
       setPosition(false)
     }
-    window.addEventListener('resize', onResizeArchive)
-    syncArchiveSlideWidths()
+    window.addEventListener('resize', onResizeGallery)
+    syncGallerySlideWidths()
     setPosition(false)
-    startArchiveAutoSlide()
+    startGalleryAuto()
     document.addEventListener('visibilitychange', () => {
-      if (document.hidden) stopArchiveAutoSlide()
-      else startArchiveAutoSlide()
+      if (document.hidden) stopGalleryAuto()
+      else startGalleryAuto()
     })
 
-    viewport.addEventListener('click', (e) => {
-      const btn = e.target.closest('.archive-video-card[data-archive-src]')
-      if (btn) {
-        const src = btn.getAttribute('data-archive-src')
-        if (src) openArchiveLightbox(src)
-      }
+    const openFromCard = (card) => {
+      const img = card.querySelector('img')
+      if (!img) return
+      const src = img.currentSrc || img.src
+      if (!src) return
+      openFestivalPhotoLightbox(src, img.alt)
+    }
+
+    track.addEventListener('click', (e) => {
+      const card = e.target.closest('.festival-gallery-card')
+      if (!card || !track.contains(card)) return
+      openFromCard(card)
+    })
+
+    track.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter' && e.key !== ' ') return
+      const card = e.target.closest('.festival-gallery-card')
+      if (!card || !track.contains(card)) return
+      e.preventDefault()
+      openFromCard(card)
     })
   }
 }
 
-if (archiveCloseBtn) archiveCloseBtn.addEventListener('click', closeArchiveLightbox)
-if (archiveLightbox) {
-  archiveLightbox.addEventListener('click', (e) => {
-    if (e.target === archiveLightbox) closeArchiveLightbox()
+const teamCarousel = document.querySelector('[data-team-carousel]')
+if (teamCarousel) {
+  const viewport = teamCarousel.querySelector('#team-carousel-viewport')
+  const track = teamCarousel.querySelector('#team-carousel-track')
+  const prevBtn = teamCarousel.querySelector('.team-carousel-nav--prev')
+  const nextBtn = teamCarousel.querySelector('.team-carousel-nav--next')
+  if (viewport && track && prevBtn && nextBtn) {
+    let slides = Array.from(track.children)
+    const originalCount = slides.length
+    const maxVisible = 3
+    if (originalCount > 1) {
+      const firstClones = slides.slice(0, maxVisible).map((el) => el.cloneNode(true))
+      const lastClones = slides.slice(-maxVisible).map((el) => el.cloneNode(true))
+      lastClones.forEach((c) => track.insertBefore(c, track.firstChild))
+      firstClones.forEach((c) => track.appendChild(c))
+      slides = Array.from(track.children)
+    }
+
+    const getVisibleCount = () => {
+      if (window.matchMedia('(min-width: 1024px)').matches) return 3
+      if (window.matchMedia('(min-width: 640px)').matches) return 2
+      return 1
+    }
+
+    const syncTeamSlideWidths = () => {
+      slides = Array.from(track.children)
+      const vw = viewport.getBoundingClientRect().width
+      const count = getVisibleCount()
+      const g = window.getComputedStyle(track).gap
+      const gap = parseFloat(g) || 16
+      const w = Math.max(200, (vw - (count - 1) * gap) / count)
+      slides.forEach((el) => {
+        el.style.flex = `0 0 ${w}px`
+      })
+    }
+
+    let index = originalCount > 1 ? maxVisible : 0
+    let isAnimating = false
+
+    const slideWidth = () => {
+      const el = slides[0]
+      if (!el) return 0
+      const g = window.getComputedStyle(track).gap
+      const gap = parseFloat(g) || 16
+      return el.getBoundingClientRect().width + gap
+    }
+
+    const setPosition = (animate = true) => {
+      const w = slideWidth()
+      const x = -index * w
+      track.style.transition = animate ? 'transform 0.55s cubic-bezier(0.33, 1, 0.32, 1)' : 'none'
+      track.style.transform = `translate3d(${x}px,0,0)`
+    }
+
+    const go = (dir) => {
+      if (isAnimating) return
+      isAnimating = true
+      index += dir
+      setPosition(true)
+    }
+
+    const AUTO_TEAM_MS = 6000
+    let teamAutoTimer = null
+    const stopTeamAuto = () => {
+      if (teamAutoTimer !== null) {
+        clearInterval(teamAutoTimer)
+        teamAutoTimer = null
+      }
+    }
+    const startTeamAuto = () => {
+      stopTeamAuto()
+      if (reducedMotion || originalCount <= 1) return
+      teamAutoTimer = window.setInterval(() => go(1), AUTO_TEAM_MS)
+    }
+    const restartTeamAuto = () => {
+      stopTeamAuto()
+      startTeamAuto()
+    }
+
+    track.addEventListener('transitionend', (e) => {
+      if (e.target !== track || e.propertyName !== 'transform') return
+      if (originalCount > 1) {
+        if (index >= originalCount + maxVisible) {
+          index = maxVisible
+          setPosition(false)
+        } else if (index <= maxVisible - 1) {
+          index = originalCount + maxVisible - 1
+          setPosition(false)
+        }
+      }
+      isAnimating = false
+    })
+
+    prevBtn.addEventListener('click', () => {
+      restartTeamAuto()
+      go(-1)
+    })
+    nextBtn.addEventListener('click', () => {
+      restartTeamAuto()
+      go(1)
+    })
+
+    let teamTouchStartX = 0
+    viewport.addEventListener(
+      'touchstart',
+      (e) => {
+        teamTouchStartX = e.changedTouches[0].clientX
+      },
+      { passive: true },
+    )
+    viewport.addEventListener(
+      'touchend',
+      (e) => {
+        const dx = e.changedTouches[0].clientX - teamTouchStartX
+        if (Math.abs(dx) > 40) {
+          restartTeamAuto()
+          go(dx > 0 ? -1 : 1)
+        }
+      },
+      { passive: true },
+    )
+
+    const onResizeTeam = () => {
+      syncTeamSlideWidths()
+      setPosition(false)
+    }
+    window.addEventListener('resize', onResizeTeam)
+    syncTeamSlideWidths()
+    setPosition(false)
+    startTeamAuto()
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) stopTeamAuto()
+      else startTeamAuto()
+    })
+  }
+}
+
+if (festivalLightboxCloseBtn) festivalLightboxCloseBtn.addEventListener('click', closeFestivalPhotoLightbox)
+if (festivalPhotoLightbox) {
+  festivalPhotoLightbox.addEventListener('click', (e) => {
+    if (e.target === festivalPhotoLightbox) closeFestivalPhotoLightbox()
   })
 }
 window.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') closeArchiveLightbox()
+  if (e.key === 'Escape') closeFestivalPhotoLightbox()
 })
 
 document.querySelectorAll('video').forEach((video) => {
@@ -355,6 +679,7 @@ if (registerForm && regStatus) {
     const phone = registerForm.querySelector('#reg-phone')
     const email = registerForm.querySelector('#reg-email')
     const message = registerForm.querySelector('#reg-message')
+    const captchaTokenInput = registerForm.querySelector('input[name="cf-turnstile-response"]')
 
     let ok = true
     if (name && !name.value.trim()) {
@@ -377,13 +702,19 @@ if (registerForm && regStatus) {
 
     if (!ok) return
 
+    if (captchaTokenInput && !captchaTokenInput.value.trim()) {
+      regStatus.textContent = 'Подтвердите, что вы не робот.'
+      return
+    }
+
     const payload = {
       access_key: formConfig.web3formsAccessKey || accessKeyInput?.value || '',
-      subject: 'Новая заявка SIYAI.FEST',
+      subject: 'Новая заявка Siai.fest',
       name: name?.value.trim() || '',
       phone: phone?.value.trim() || '',
       email: email?.value.trim() || '',
       message: message?.value.trim() || '',
+      'cf-turnstile-response': captchaTokenInput?.value.trim() || '',
     }
 
     if (!payload.access_key) {
@@ -401,9 +732,9 @@ if (registerForm && regStatus) {
       })
       const data = await res.json().catch(() => ({}))
       if (data.success) {
-        const stub = formConfig.instagramAfterFormStubUrl || '#'
-        regStatus.innerHTML = `Спасибо, мы свяжемся с вами. Далее - переход в Instagram: <a href="${stub}" class="text-[#c9a96e] underline underline-offset-4" data-instagram-stub>@siai.fest</a> (ссылка-заглушка).`
+        regStatus.innerHTML = 'Спасибо, мы свяжемся с вами. Instagram: <a href="https://instagram.com/siai.fest" class="text-[#c9a96e] underline underline-offset-4" target="_blank" rel="noopener noreferrer">@siai.fest</a>.'
         registerForm.reset()
+        if (window.turnstile) window.turnstile.reset()
       } else {
         regStatus.textContent = data.message || 'Не удалось отправить. Попробуйте позже.'
       }
