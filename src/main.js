@@ -651,8 +651,11 @@ if (accessKeyInput && formConfig.web3formsAccessKey) {
 }
 
 const registerForm = document.getElementById('register-form')
-const regStatus = document.getElementById('reg-status')
 const regSubmit = document.getElementById('reg-submit')
+
+function showFormMessage(message) {
+  if (message) window.alert(message)
+}
 
 function setFieldInvalid(input, invalid, messageId, message) {
   input.setAttribute('aria-invalid', invalid ? 'true' : 'false')
@@ -670,10 +673,9 @@ function setFieldInvalid(input, invalid, messageId, message) {
   input.classList.toggle('focus:border-red-500', invalid)
 }
 
-if (registerForm && regStatus) {
+if (registerForm) {
   registerForm.addEventListener('submit', async (e) => {
     e.preventDefault()
-    regStatus.textContent = ''
 
     const name = registerForm.querySelector('#reg-name')
     const phone = registerForm.querySelector('#reg-phone')
@@ -703,7 +705,7 @@ if (registerForm && regStatus) {
     if (!ok) return
 
     if (captchaTokenInput && !captchaTokenInput.value.trim()) {
-      regStatus.textContent = 'Подтвердите, что вы не робот.'
+      showFormMessage('Подтвердите, что вы не робот.')
       return
     }
 
@@ -718,8 +720,7 @@ if (registerForm && regStatus) {
     }
 
     if (!payload.access_key) {
-      regStatus.textContent =
-        'Не задан ключ Web3Forms: добавьте VITE_WEB3FORMS_ACCESS_KEY в файл .env и перезапустите сборку.'
+      showFormMessage('Не задан ключ Web3Forms: добавьте VITE_WEB3FORMS_ACCESS_KEY в файл .env и перезапустите сборку.')
       return
     }
 
@@ -732,14 +733,14 @@ if (registerForm && regStatus) {
       })
       const data = await res.json().catch(() => ({}))
       if (data.success) {
-        regStatus.innerHTML = 'Спасибо, мы свяжемся с вами. Instagram: <a href="https://instagram.com/siai.fest" class="text-[#c9a96e] underline underline-offset-4" target="_blank" rel="noopener noreferrer">@siai.fest</a>.'
+        showFormMessage('Спасибо, мы свяжемся с вами. Instagram: @siai.fest.')
         registerForm.reset()
         if (window.turnstile) window.turnstile.reset()
       } else {
-        regStatus.textContent = data.message || 'Не удалось отправить. Попробуйте позже.'
+        showFormMessage(data.message || 'Не удалось отправить. Попробуйте позже.')
       }
     } catch {
-      regStatus.textContent = 'Ошибка сети. Попробуйте позже.'
+      showFormMessage('Ошибка сети. Попробуйте позже.')
     } finally {
       if (regSubmit) regSubmit.disabled = false
     }
