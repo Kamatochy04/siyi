@@ -1,8 +1,67 @@
 import './style.css'
 import AOS from 'aos'
 import 'aos/dist/aos.css'
-import { formConfig } from './config.js'
 import { mockContent } from './mockContent.js'
+
+const FORM_SUBMIT_AJAX = 'https://formsubmit.co/ajax/Maria.solaar@yandex.ru'
+
+/** Превью в карточках видео: кадр из файла (тот же origin). */
+function initVideoReviewPosters(trackEl) {
+  const fallbackPoster =
+    'data:image/svg+xml,' +
+    encodeURIComponent(
+      '<svg xmlns="http://www.w3.org/2000/svg" width="720" height="1280" viewBox="0 0 720 1280"><rect fill="#0f1628" width="720" height="1280"/><path fill="#c9a96e" fill-opacity="0.2" d="M300 580h120v80H300z"/><path fill="#c9a96e" d="M360 610l40 24v-48z"/></svg>',
+    )
+  const seen = new WeakSet()
+  trackEl.querySelectorAll('video').forEach((video) => {
+    if (seen.has(video)) return
+    seen.add(video)
+    video.muted = true
+    const applyFallback = () => {
+      video.poster = fallbackPoster
+    }
+    const failTimer = window.setTimeout(applyFallback, 12000)
+    const capture = () => {
+      window.clearTimeout(failTimer)
+      try {
+        const w = video.videoWidth
+        const h = video.videoHeight
+        if (!w || !h) {
+          applyFallback()
+          return
+        }
+        const canvas = document.createElement('canvas')
+        canvas.width = w
+        canvas.height = h
+        const ctx = canvas.getContext('2d')
+        if (!ctx) {
+          applyFallback()
+          return
+        }
+        ctx.drawImage(video, 0, 0, w, h)
+        video.poster = canvas.toDataURL('image/jpeg', 0.82)
+      } catch {
+        applyFallback()
+      }
+    }
+    const onCanPaint = () => {
+      const dur = Number.isFinite(video.duration) && video.duration > 0 ? video.duration : 0
+      const seekTo = Math.max(0.04, Math.min(0.15, dur * 0.02 || 0.06))
+      const onSeeked = () => {
+        capture()
+        video.removeEventListener('seeked', onSeeked)
+      }
+      video.addEventListener('seeked', onSeeked, { once: true })
+      try {
+        video.currentTime = seekTo
+      } catch {
+        applyFallback()
+      }
+    }
+    if (video.readyState >= 2) onCanPaint()
+    else video.addEventListener('loadeddata', onCanPaint, { once: true })
+  })
+}
 
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
@@ -79,6 +138,8 @@ if (videoSlider) {
       slides = Array.from(track.children)
     }
 
+    initVideoReviewPosters(track)
+
     let index = 3
     let isAnimating = false
 
@@ -96,7 +157,7 @@ if (videoSlider) {
       setPosition(true)
     }
 
-    const AUTO_SLIDE_MS = 6000
+    const AUTO_SLIDE_MS = 1500
     let autoSlideTimer = null
     const stopAutoSlide = () => {
       if (autoSlideTimer !== null) {
@@ -645,11 +706,6 @@ document.body.addEventListener('click', (e) => {
   if (stub) e.preventDefault()
 })
 
-const accessKeyInput = document.querySelector('#register-form input[name="access_key"]')
-if (accessKeyInput && formConfig.web3formsAccessKey) {
-  accessKeyInput.value = formConfig.web3formsAccessKey
-}
-
 const registerForm = document.getElementById('register-form')
 const regSubmit = document.getElementById('reg-submit')
 
@@ -709,38 +765,46 @@ if (registerForm) {
       return
     }
 
-    const payload = {
-      access_key: formConfig.web3formsAccessKey || accessKeyInput?.value || '',
-      subject: 'Новая заявка Siai.fest',
-      name: name?.value.trim() || '',
-      phone: phone?.value.trim() || '',
-      email: email?.value.trim() || '',
-      message: message?.value.trim() || '',
-      'cf-turnstile-response': captchaTokenInput?.value.trim() || '',
-    }
+    const nameVal = name?.value.trim() || ''
+    const phoneVal = phone?.value.trim() || ''
+    const emailVal = email?.value.trim() || ''
+    const messageVal = message?.value.trim() || ''
+    const turnstileVal = captchaTokenInput?.value.trim() || ''
 
-    if (!payload.access_key) {
-      showFormMessage('Не задан ключ Web3Forms: добавьте VITE_WEB3FORMS_ACCESS_KEY в файл .env и перезапустите сборку.')
-      return
-    }
+    const messageLines = [messageVal, `Телефон: ${phoneVal}`, emailVal ? `Email: ${emailVal}` : 'Email не указан']
+      .filter(Boolean)
+      .join('\n\n')
+
+    const fd = new FormData(registerForm)
+    fd.set('name', nameVal)
+    fd.set('email', emailVal || '—')
+    fd.set('phone', phoneVal)
+    fd.set('message', messageLines)
+    fd.set('_subject', 'Новая заявка Siai.fest')
+    fd.set('_captcha', 'false')
+    if (turnstileVal) fd.set('cf-turnstile-response', turnstileVal)
 
     if (regSubmit) regSubmit.disabled = true
     try {
-      const res = await fetch('https://api.web3forms.com/submit', {
+      const res = await fetch(FORM_SUBMIT_AJAX, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-        body: JSON.stringify(payload),
+        body: fd,
+        headers: { Accept: 'application/json' },
       })
       const data = await res.json().catch(() => ({}))
-      if (data.success) {
-        showFormMessage('Спасибо, мы свяжемся с вами. Instagram: @siai.fest.')
+      const ok = res.ok && (data.success === true || data.success === 'true')
+      if (ok) {
+        showFormMessage('Спасибо, заявка отправлена. Мы свяжемся с вами. Instagram: @siai.fest.')
         registerForm.reset()
         if (window.turnstile) window.turnstile.reset()
       } else {
-        showFormMessage(data.message || 'Не удалось отправить. Попробуйте позже.')
+        showFormMessage(
+          (typeof data.message === 'string' && data.message) ||
+            'Не удалось отправить. Проверьте данные или напишите на Maria.solaar@yandex.ru.',
+        )
       }
     } catch {
-      showFormMessage('Ошибка сети. Попробуйте позже.')
+      showFormMessage('Ошибка сети. Попробуйте позже или напишите на Maria.solaar@yandex.ru.')
     } finally {
       if (regSubmit) regSubmit.disabled = false
     }
