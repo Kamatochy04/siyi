@@ -4,6 +4,7 @@ import 'aos/dist/aos.css'
 import { mockContent } from './mockContent.js'
 
 const FORM_SUBMIT_AJAX = 'https://formsubmit.co/ajax/Maria.solaar@yandex.ru'
+const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY || ''
 
 /** Превью в карточках видео: кадр из файла (тот же origin). */
 function initVideoReviewPosters(trackEl) {
@@ -733,6 +734,11 @@ document.body.addEventListener('click', (e) => {
 
 const registerForm = document.getElementById('register-form')
 const regSubmit = document.getElementById('reg-submit')
+const turnstileWidget = document.querySelector('.cf-turnstile')
+
+if (turnstileWidget && TURNSTILE_SITE_KEY) {
+  turnstileWidget.setAttribute('data-sitekey', TURNSTILE_SITE_KEY)
+}
 
 function showFormMessage(message) {
   if (message) window.alert(message)
