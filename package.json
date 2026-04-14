@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "start": "vite build && node server.js"
+    "start": "vite"
   },
   "devDependencies": {
     "autoprefixer": "^10.4.21",
@@ -16,8 +16,6 @@
     "vite": "^5.4.14"
   },
   "dependencies": {
-    "@hono/node-server": "^1.13.7",
-    "aos": "^2.3.4",
-    "hono": "^4.7.5"
+    "aos": "^2.3.4"
   }
 }
