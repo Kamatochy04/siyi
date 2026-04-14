@@ -65,6 +65,31 @@ function initVideoReviewPosters(trackEl) {
 
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
+function initStartupSplash() {
+  const splash = document.getElementById('startup-splash')
+  if (!splash) return
+
+  const isMobile = window.matchMedia('(max-width: 767px)').matches
+  if (!isMobile) {
+    splash.remove()
+    return
+  }
+
+  const holdMs = 3000
+  const fadeMs = 700
+  if (reducedMotion) {
+    window.setTimeout(() => splash.remove(), holdMs)
+    return
+  }
+
+  window.setTimeout(() => {
+    splash.classList.add('is-hiding')
+    window.setTimeout(() => splash.remove(), fadeMs)
+  }, holdMs)
+}
+
+initStartupSplash()
+
 const staggerSections = document.querySelectorAll('.js-stagger-section')
 staggerSections.forEach((section) => {
   const nodes = section.querySelectorAll(

@@ -243,6 +243,46 @@
     transform: none;
   }
 
+  .startup-splash {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #050913;
+    opacity: 1;
+    transition: opacity 700ms ease;
+  }
+
+  .startup-splash.is-hiding {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .startup-splash__image {
+    width: 100vw;
+    height: 100vh;
+    object-fit: cover;
+  }
+
+  @media (min-width: 1024px) {
+    .startup-splash {
+      background:
+        radial-gradient(ellipse 70% 60% at 50% 50%, rgba(201, 169, 110, 0.16), transparent 62%),
+        #050913;
+      padding: 28px;
+    }
+
+    .startup-splash__image {
+      width: min(92vw, 1520px);
+      height: min(92vh, 920px);
+      object-fit: contain;
+      border-radius: 18px;
+      box-shadow: 0 30px 80px rgba(0, 0, 0, 0.62), 0 0 0 1px rgba(201, 169, 110, 0.24);
+    }
+  }
+
   .section-bg {
     position: relative;
     overflow: hidden;
